@@ -105,9 +105,6 @@ function fix (exercise) {
           }
       )
 
-
-      console.log('contents:', type, contents)
-
       callback(null, type, contents)
     })
   }
