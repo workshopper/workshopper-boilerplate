@@ -1,0 +1,15 @@
+{
+  "name": "workshopper-boilerplate",
+  "version": "0.0.0",
+  "description": "A boilerplate-provider component for the Workshopper framework",
+  "main": "./boilerplate.js",
+  "author": "Rod Vagg <rod@vagg.org> (https://github.com/rvagg)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rvagg/workshopper-boilerplate.git"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "after": "~0.8.1"
+  }
+}
