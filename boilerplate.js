@@ -1,6 +1,7 @@
 const fs    = require('fs')
     , path  = require('path')
     , after = require('after')
+    , cpr   = require('cpr')
 
 
 // find a destination for this file, if it already exists then add a number to
@@ -51,18 +52,39 @@ function prepare (callback) {
 
       out[src] = out[path.basename(src)] = path.basename(dst)
 
-      fs.createReadStream(src)
-        .on('error', function (err) {
-          callback && callback(err)
-        })
-        .pipe(fs.createWriteStream(dst))
-        .on('error', function (err) {
-          callback && callback(err)
-        })
-        .on('close', function () {
-          callback && callback()
-        })
+
+      copy(src, dst, callback)
     })
+  })
+}
+
+
+function copy (src, dst, callback) {
+  function copyFile () {
+    fs.createReadStream(src)
+      .on('error', function (err) {
+        callback && callback(err)
+      })
+      .pipe(fs.createWriteStream(dst))
+      .on('error', function (err) {
+        callback && callback(err)
+      })
+      .on('close', function () {
+        callback && callback()
+      })
+  }
+
+  fs.stat(src, function (err, stat) {
+    if (err)
+      return callback(err)
+
+    if (stat.isFile())
+      return copyFile()
+
+    if (stat.isDirectory())
+      return cpr(src, dst, callback)
+
+    return callback(new Error('Boilerplate source must be a regular file or directory'))
   })
 }
 
