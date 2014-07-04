@@ -11,6 +11,6 @@
   "license": "MIT",
   "dependencies": {
     "after": "~0.8.1",
-    "cpr": "~0.2.0"
+    "cpr": "~0.3.2"
   }
 }
