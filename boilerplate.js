@@ -3,12 +3,28 @@ const fs    = require('fs')
     , after = require('after')
     , cpr   = require('cpr')
 
+function adjustForLang(orig, lang, cb) {
+  if (!lang) {
+    process.nextTick(function() { cb(orig); });
+    return;
+  }
+
+  var extName = path.extname(orig),
+      langAware = orig.slice(0, -extName.length) + '.' + lang + extName;
+
+  fs.exists(langAware, function(exists) {
+    cb(exists ? langAware : orig);
+  });
+}
 
 // find a destination for this file, if it already exists then add a number to
 // the end of the filename (before extension) and keep incrementing that number
 // until we find a free filename
 
-function findDestination (file, callback) {
+function findDestination (file, lang, callback) {
+  if (lang) {
+    file = file.replace('.' + lang, '');
+  }
   file = path.basename(file)
 
   var f = path.join(process.cwd(), file)
@@ -43,18 +59,21 @@ function prepare (callback) {
 
   var done = after(this._boilerplate.length, callback)
     , out  = this.boilerplateOut = {}
+    , self = this;
 
-  this._boilerplate.forEach(function (src) {
-    var callback = done
-    findDestination(src, function (err, dst) {
-      if (err)
-        return callback(err)
+  this._boilerplate.forEach(function (src, index) {
+    adjustForLang(src, self.lang, function(src) {
+      self._boilerplate[index] = src;
+      var callback = done
+      findDestination(src, self.lang, function (err, dst) {
+        if (err)
+          return callback(err)
 
-      out[src] = out[path.basename(src)] = path.basename(dst)
+        out[src] = out[path.basename(src)] = path.basename(dst)
 
-
-      copy(src, dst, callback)
-    })
+        copy(src, dst, callback)
+      })
+    });
   })
 }
 
