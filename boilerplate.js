@@ -8,29 +8,50 @@ const fs    = require('fs')
 // the end of the filename (before extension) and keep incrementing that number
 // until we find a free filename
 
-function findDestination (file, callback) {
+function findDestination (file, contents, callback) {
+  function statCompare (f, callback) {
+    fs.stat(f, function (err) {
+      if (err)
+        return callback(null, f, false)
+
+      if (!contents)
+        callback(new Error('File / directory exists'))
+
+      // else we have file contents to compare with, we can reuse a file if it's
+      // the same as original
+      fs.readFile(f, 'utf8', function (err, cmpContents) {
+        if (err)
+          return callback(err)
+
+        if (cmpContents == contents) // identical, good to use!
+          return callback(null, f, true)
+
+        callback(new Error('File / directory exists'))
+      })
+    })
+  }
+
   file = path.basename(file)
 
-  var f = path.join(process.cwd(), file)
+  var f   = path.join(process.cwd(), file)
+    , ext = path.extname(file)
+    , pfx = file.substring(0, file.length - ext.length)
+    , i   = 0
 
-  fs.exists(f, function (exists) {
-    if (!exists)
-      return callback(null, f)
+  statCompare(f, next)
 
-    var ext = path.extname(file)
-      , pfx = file.substring(0, file.length - ext.length)
+  function next (err, f, exists) {
+    if (f) // found a new file to use
+      return callback(null, f, exists)
 
-    ;(function next (i) {
-      f = path.join(process.cwd(), pfx + i + ext)
+    if (i == 100) // arbitrary limit, got to set it somewhere ...
+      return callback(new Error('Considered 100 filenames to use for boilerplate but could not find an unused one'))
 
-      fs.exists(f, function (exists) {
-        if (!exists)
-          return callback(null, f)
+    f = path.join(process.cwd(), pfx + i + ext)
+    i++
 
-        next(i + 1)
-      })
-    }(1))
-  })
+    statCompare(f, next)
+  }
 }
 
 
@@ -42,19 +63,57 @@ function prepare (callback) {
     return process.nextTick(callback)
 
   var done = after(this._boilerplate.length, callback)
-    , out  = this.boilerplateOut = {}
+    , map  = this.boilerplateOut = {}
 
   this._boilerplate.forEach(function (src) {
-    var callback = done
-    findDestination(src, function (err, dst) {
+    copyItem(src, map, done)
+  })
+}
+
+
+function copyItem (src, map, callback) {
+  function process (contents) {
+    findDestination(src.file, contents, function (err, dst, write) {
       if (err)
         return callback(err)
 
-      out[src] = out[path.basename(src)] = path.basename(dst)
+      map[src.file] = map[path.basename(src.file)] = path.basename(dst)
 
+      if (write === false)
+        return callback()
 
-      copy(src, dst, callback)
+      copy(src.file, dst, callback)
     })
+  }
+
+  function checkAndRead () {
+    fs.stat(src.file, function (err, stat) {
+      if (err)
+        return callback(err)
+
+      if (stat.isDirectory())
+        process()
+
+      if (!stat.isFile())
+        return callback(new Error('Cannot handle non-file and non-directory boilerplate source'))
+
+      fs.readFile(src.file, 'utf8', function (err, contents) {
+        if (err)
+          return callback(err)
+
+        process(contents)
+      })
+    })
+  }
+
+  if (typeof src.contentFn != 'function')
+    return checkAndRead()
+
+  src.contentFn(function (err, contents) {
+    if (err)
+      return callback(err)
+
+    process(contents)
   })
 }
 
@@ -94,7 +153,7 @@ function fix (exercise) {
 
   exercise.addPrepare(prepare)
 
-  exercise.addBoilerplate = function (file) {
+  exercise.addBoilerplate = function (file, contentFn) {
     if (Array.isArray(file)) {
       return file.forEach(function (f) {
         exercise.addBoilerplate(f)
@@ -104,9 +163,8 @@ function fix (exercise) {
     if (typeof file != 'string')
       throw new TypeError('addBoilerplate must be provided with a path to a file or an array of paths')
 
-    exercise._boilerplate.push(file)
+    exercise._boilerplate.push({ file: file, contentFn: contentFn })
   }
-
 
   // augment getExerciseText() such that the string {boilerplate:filename} will be replaced
   // in the problem.md with the name of the copy of that file written to CWD
@@ -136,6 +194,7 @@ function fix (exercise) {
 function boilerplate (exercise) {
   if (typeof exercise.addBoilerplate != 'function')
     fix(exercise)
+
   return exercise
 }
 
