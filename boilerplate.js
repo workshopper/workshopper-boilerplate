@@ -12,8 +12,11 @@ function adjustForLang(orig, lang, cb) {
   var extName = path.extname(orig),
       langAware = orig.slice(0, -extName.length) + '.' + lang + extName;
 
-  fs.exists(langAware, function(exists) {
-    cb(exists ? langAware : orig);
+  fs.open(langAware, 'r', function(err, fd) {
+    if (!err && fd) {
+      fs.close(fd);
+    }
+    cb(null, err ? orig : langAware);
   });
 }
 
@@ -62,7 +65,12 @@ function prepare (callback) {
     , self = this;
 
   this._boilerplate.forEach(function (src, index) {
-    adjustForLang(src, self.lang, function(src) {
+    adjustForLang(src, self.lang, function(err, src) {
+      if (err) {
+        // This will never happen, actually, but I wouldn't
+        // want you to fear it might :-)
+        return callback(err);
+      }
       self._boilerplate[index] = src;
       var callback = done
       findDestination(src, self.lang, function (err, dst) {
