@@ -3,20 +3,20 @@ const fs    = require('fs')
     , after = require('after')
     , cpr   = require('cpr')
 
-function adjustForLang(orig, lang, cb) {
+function adjustForLang (orig, lang, callback) {
   if (!lang) {
-    process.nextTick(function() { cb(orig); });
-    return;
+    process.nextTick(function () { cb(orig); })
+    return
   }
 
-  var extName = path.extname(orig),
-      langAware = orig.slice(0, -extName.length) + '.' + lang + extName;
+  var extName = path.extname(orig)
+    , langAware = orig.slice(0, -extName.length) + '.' + lang + extName
 
-  fs.open(langAware, 'r', function(err, fd) {
-    if (!err && fd) {
-      fs.close(fd);
-    }
-    cb(null, err ? orig : langAware);
+  fs.open(langAware, 'r', function (err, fd) {
+    if (!err && fd)
+      fs.close(fd)
+
+    callback(null, err ? orig : langAware)
   });
 }
 
@@ -25,9 +25,9 @@ function adjustForLang(orig, lang, cb) {
 // until we find a free filename
 
 function findDestination (file, lang, callback) {
-  if (lang) {
-    file = file.replace('.' + lang, '');
-  }
+  if (lang)
+    file = file.replace('.' + lang, '')
+
   file = path.basename(file)
 
   var f = path.join(process.cwd(), file)
@@ -66,12 +66,12 @@ function prepare (callback) {
 
   this._boilerplate.forEach(function (src, index) {
     adjustForLang(src, self.lang, function(err, src) {
-      if (err) {
-        // This will never happen, actually, but I wouldn't
-        // want you to fear it might :-)
-        return callback(err);
-      }
-      self._boilerplate[index] = src;
+      // This will never happen, actually, but I wouldn't
+      // want you to fear it might :-)
+      if (err)
+        return callback(err)
+
+      self._boilerplate[index] = src
       var callback = done
       findDestination(src, self.lang, function (err, dst) {
         if (err)
