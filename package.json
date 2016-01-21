@@ -1,6 +1,6 @@
 {
   "name": "workshopper-boilerplate",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "A boilerplate-provider component for the Workshopper framework",
   "main": "./boilerplate.js",
   "author": "Rod Vagg <rod@vagg.org> (https://github.com/rvagg)",
