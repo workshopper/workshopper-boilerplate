@@ -111,7 +111,7 @@ function copy (src, dst, callback) {
       return copyFile()
 
     if (stat.isDirectory())
-      return cpr(src, dst, callback)
+      return cpr(src, dst, { overwrite: true }, callback)
 
     return callback(new Error('Boilerplate source must be a regular file or directory'))
   })
