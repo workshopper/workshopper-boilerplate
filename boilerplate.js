@@ -5,7 +5,9 @@ const fs    = require('fs')
 
 function adjustForLang (orig, lang, callback) {
   if (!lang) {
-    process.nextTick(function () { cb(orig); })
+    process.nextTick(function () {
+      callback(null, orig)
+    })
     return
   }
 
@@ -17,7 +19,7 @@ function adjustForLang (orig, lang, callback) {
       fs.close(fd)
 
     callback(null, err ? orig : langAware)
-  });
+  })
 }
 
 // find a destination for this file, if it already exists then add a number to
@@ -62,7 +64,7 @@ function prepare (callback) {
 
   var done = after(this._boilerplate.length, callback)
     , out  = this.boilerplateOut = {}
-    , self = this;
+    , self = this
 
   this._boilerplate.forEach(function (src, index) {
     adjustForLang(src, self.lang, function(err, src) {
@@ -72,16 +74,16 @@ function prepare (callback) {
         return callback(err)
 
       self._boilerplate[index] = src
-      var callback = done
+
       findDestination(src, self.lang, function (err, dst) {
         if (err)
-          return callback(err)
+          return done(err)
 
         out[src] = out[path.basename(src)] = path.basename(dst)
 
-        copy(src, dst, callback)
+        copy(src, dst, done)
       })
-    });
+    })
   })
 }
 
